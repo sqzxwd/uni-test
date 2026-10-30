@@ -85,7 +85,7 @@ def is_admin_authenticated(request: Request) -> bool:
             pwd = parts[1] if len(parts) > 1 else parts[0]
             if pwd == ADMIN_PASSWORD:
                 return True
-        except ValueError, UnicodeDecodeError:
+        except (ValueError, UnicodeDecodeError):
             return False
 
     return False
