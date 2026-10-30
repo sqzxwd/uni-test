@@ -225,7 +225,7 @@ async def submit_exam(
     focus_loss_raw = form_data.get("focus_loss_count", 0)
     try:
         focus_loss_count = max(0, int(focus_loss_raw))
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         focus_loss_count = 0
 
     try:
