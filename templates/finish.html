@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Тест сдан | uni-test-sentinel{% endblock %}
+
+{% block body %}
+<div class="min-h-full flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50">
+    <div class="max-w-md w-full text-center">
+        
+        <!-- Big Success Icon -->
+        <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-emerald-100 text-emerald-600 mb-6 shadow-inner animate-bounce">
+            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+
+        <!-- Main Card -->
+        <div class="bg-white py-8 px-6 sm:px-10 rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 space-y-4">
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Тест успешно сдан!
+            </h1>
+            
+            <p class="text-base text-slate-600 leading-relaxed">
+                Ваши ответы приняты и сохранены в базе данных системы.
+            </p>
+
+            <div class="bg-amber-50 border border-amber-200/70 rounded-2xl p-4 text-xs sm:text-sm text-amber-900 text-left space-y-1">
+                <div class="font-bold flex items-center space-x-1.5 text-amber-800">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Обратите внимание:</span>
+                </div>
+                <p>
+                    В целях предотвращения подсказок правильные ответы на экране студента не отображаются.
+                </p>
+                <p>
+                    Итоговые результаты и баллы будут объявлены преподавателем после завершения тестирования потока.
+                </p>
+            </div>
+
+            <div class="pt-4">
+                <p class="text-xs text-slate-400">
+                    Вы можете закрыть эту вкладку браузера на вашем устройстве.
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-8 text-xs text-slate-400">
+            uni-test-sentinel • Контроль знаний 1 курс
+        </div>
+    </div>
+</div>
+{% endblock %}

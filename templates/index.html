@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация | uni-test-sentinel{% endblock %}
+
+{% block body %}
+<div class="min-h-full flex flex-col justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8 bg-slate-50">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <!-- Logo / Header -->
+        <div class="text-center">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-500/30 mb-4">
+                <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                Информационные технологии
+            </h2>
+            <p class="mt-2 text-sm text-slate-600">
+                Входное аудиторное тестирование • 1 курс
+            </p>
+        </div>
+
+        <!-- Notification / Alerts -->
+        {% if error %}
+        <div class="mt-4 p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700 flex items-start space-x-3">
+            <svg class="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Registration Card -->
+        <div class="mt-6 bg-white py-8 px-6 shadow-xl shadow-slate-200/60 rounded-2xl sm:px-10 border border-slate-100">
+            <form action="/start" method="POST" id="regForm" class="space-y-5">
+                <!-- ФИО -->
+                <div>
+                    <label for="fio" class="block text-sm font-semibold text-slate-700">
+                        Фамилия Имя Отчество <span class="text-red-500">*</span>
+                    </label>
+                    <div class="mt-1.5 relative">
+                        <input type="text" id="fio" name="fio" required
+                               placeholder="например: Иванов Иван Алексеевич"
+                               autocomplete="name"
+                               class="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 text-base transition-colors">
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Укажите полное имя как в зачетной книжке</p>
+                </div>
+
+                <!-- Группа -->
+                <div>
+                    <label for="group_name" class="block text-sm font-semibold text-slate-700">
+                        Академическая группа <span class="text-red-500">*</span>
+                    </label>
+                    <div class="mt-1.5">
+                        <select id="group_name" name="group_name" required
+                                class="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 bg-white focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 text-base transition-colors">
+                            <option value="" disabled selected>— Выберите вашу группу —</option>
+                            {% for g in groups %}
+                            <option value="{{ g }}">{{ g }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Дата тестирования -->
+                <div>
+                    <label for="test_date" class="block text-sm font-semibold text-slate-700">
+                        Дата тестирования
+                    </label>
+                    <div class="mt-1.5">
+                        <input type="date" id="test_date" name="test_date" value="{{ today_date }}" required
+                               class="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 bg-white focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 text-base transition-colors">
+                    </div>
+                </div>
+
+                <!-- Правила тестирования кратко -->
+                <div class="bg-blue-50/70 border border-blue-100 rounded-xl p-3.5 text-xs text-blue-900 space-y-1.5">
+                    <div class="font-semibold flex items-center space-x-1.5">
+                        <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>Условия прохождения:</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-0.5 text-blue-800 pl-1">
+                        <li>Ровно 20 вопросов из 6 разделов курса</li>
+                        <li>Время на выполнение: <strong>40 минут</strong></li>
+                        <li>Попытка ровно одна, билет генерируется индивидуально</li>
+                    </ul>
+                </div>
+
+                <!-- Кнопка начала -->
+                <div class="pt-2">
+                    <button type="submit" id="startBtn"
+                            class="w-full flex items-center justify-center py-3.5 px-4 rounded-xl shadow-lg shadow-brand-500/30 text-base font-semibold text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 active:scale-[0.99] transition-all">
+                        <span>Начать тестирование</span>
+                        <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <p class="mt-8 text-center text-xs text-slate-400">
+            Платформа «uni-test-sentinel» • Сервер лекционной аудитории
+        </p>
+    </div>
+</div>
+
+<script>
+    document.getElementById('regForm').addEventListener('submit', function(e) {
+        const fioInput = document.getElementById('fio');
+        const trimmed = fioInput.value.trim();
+        const parts = trimmed.split(/\s+/);
+        if (parts.length < 2) {
+            e.preventDefault();
+            alert('Пожалуйста, введите Фамилию и Имя (минимум 2 слова).');
+            fioInput.focus();
+            return;
+        }
+        const btn = document.getElementById('startBtn');
+        btn.disabled = true;
+        btn.classList.add('opacity-75', 'cursor-not-allowed');
+        btn.innerHTML = `
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            Генерация билета...
+        `;
+    });
+</script>
+{% endblock %}

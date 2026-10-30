@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}uni-test-sentinel | Система тестирования{% endblock %}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Touch optimization for mobile */
+        input[type="radio"] {
+            accent-color: #2563eb;
+        }
+        .option-label {
+            transition: all 0.15s ease-in-out;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .option-label:active {
+            transform: scale(0.985);
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="h-full flex flex-col font-sans text-slate-800 antialiased selection:bg-brand-500 selection:text-white">
+
+    {% block body %}{% endblock %}
+
+</body>
+</html>

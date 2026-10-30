@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Детализация ответов: {{ session.fio }} | uni-test-sentinel{% endblock %}
+
+{% block body %}
+<div class="min-h-full flex flex-col bg-slate-50 text-slate-800">
+
+    <!-- Top Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <a href="/admin" class="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors" title="Назад к ведомости">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                </a>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">
+                        Детализация билета: {{ session.fio }}
+                    </h1>
+                    <p class="text-xs text-slate-500">
+                        {{ session.group_name }} • Дата сдачи: {{ session.test_date }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Grade Badge -->
+            <div class="flex items-center space-x-2">
+                <span class="text-xs font-semibold text-slate-500">Балл:</span>
+                <span class="font-extrabold text-slate-900 text-base sm:text-lg">{{ session.formatted_score }} ({{ session.percentage }}%)</span>
+                {% if session.grade == 5 %}
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    Оценка 5
+                </span>
+                {% elif session.grade == 4 %}
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                    Оценка 4
+                </span>
+                {% elif session.grade == 3 %}
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                    Оценка 3
+                </span>
+                {% else %}
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
+                    Оценка 2
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+        <!-- Mistakes summary filter buttons -->
+        {% set correct_cnt = session.questions | selectattr('is_correct') | list | length %}
+        {% set errors_cnt = session.questions | rejectattr('is_correct') | list | length %}
+        <div class="flex items-center justify-between bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="text-xs sm:text-sm font-semibold text-slate-700">
+                Всего вопросов: 20 • Балл: <span class="text-brand-700 font-bold">{{ session.formatted_score }}</span> • Правильных: <span class="text-emerald-600 font-bold">{{ correct_cnt }}</span> • Ошибок: <span class="text-red-600 font-bold">{{ errors_cnt }}</span>
+            </div>
+            <div class="flex space-x-2 text-xs">
+                <button onclick="filterQuestions('all')" id="btnFilterAll"
+                        class="px-3 py-1.5 rounded-xl font-bold bg-brand-600 text-white shadow-sm transition-all">
+                    Все вопросы (20)
+                </button>
+                <button onclick="filterQuestions('errors')" id="btnFilterErrors"
+                        class="px-3 py-1.5 rounded-xl font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all">
+                    Только ошибки ({{ errors_cnt }})
+                </button>
+            </div>
+        </div>
+
+        <!-- Questions List -->
+        <div class="space-y-4">
+            {% for q in session.questions %}
+            <div class="question-item bg-white rounded-2xl p-5 border shadow-sm transition-all {% if q.is_correct %}border-slate-200 is-correct{% else %}border-red-200 bg-red-50/20 is-error{% endif %}"
+                 data-is-correct="{{ 1 if q.is_correct else 0 }}">
+                
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2.5 py-0.5 rounded-lg text-xs font-bold {% if q.is_correct %}bg-emerald-50 text-emerald-700 border border-emerald-200{% else %}bg-red-100 text-red-700 border border-red-200{% endif %}">
+                            Вопрос {{ q.question_order }}
+                        </span>
+                        <span class="text-xs text-slate-500 font-medium">
+                            Раздел {{ q.section }}: {{ q.section_name }}
+                        </span>
+                    </div>
+
+                    <div>
+                        {% if q.is_correct %}
+                        <span class="inline-flex items-center text-xs font-bold text-emerald-600">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Верно (+0.5)
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center text-xs font-bold text-red-600">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            Ошибка (0.0)
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Text -->
+                <h3 class="text-sm sm:text-base font-semibold text-slate-900 mb-3">
+                    {{ q.question_text }}
+                </h3>
+
+                <!-- Options -->
+                <div class="space-y-1.5 text-xs sm:text-sm">
+                    {% for opt in q.options %}
+                    {% set is_selected = (opt == q.selected_answer) %}
+                    {% set is_answer = (opt == q.correct_answer) %}
+
+                    <div class="p-2.5 rounded-xl border flex items-center justify-between
+                        {% if is_answer %}
+                            bg-emerald-50 border-emerald-300 text-emerald-900 font-medium
+                        {% elif is_selected and not is_answer %}
+                            bg-red-50 border-red-300 text-red-900 line-through
+                        {% else %}
+                            bg-slate-50/60 border-slate-200 text-slate-600
+                        {% endif %}">
+                        
+                        <div class="flex items-center space-x-2">
+                            {% if is_answer %}
+                            <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            {% elif is_selected %}
+                            <svg class="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            {% else %}
+                            <span class="w-4 h-4 inline-block shrink-0"></span>
+                            {% endif %}
+                            <span>{{ opt }}</span>
+                        </div>
+
+                        <div class="text-[11px] font-semibold shrink-0 pl-2">
+                            {% if is_answer and is_selected %}
+                                <span class="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">Выбор студента (Верно)</span>
+                            {% elif is_answer %}
+                                <span class="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">Правильный ответ</span>
+                            {% elif is_selected %}
+                                <span class="text-red-700 bg-red-100 px-2 py-0.5 rounded-md">Выбор студента (Неверно)</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if not q.selected_answer %}
+                <div class="mt-2 text-xs text-amber-600 font-medium">
+                    ⚠️ Студент оставил этот вопрос без ответа.
+                </div>
+                {% endif %}
+
+            </div>
+            {% endfor %}
+        </div>
+
+    </main>
+</div>
+
+<script>
+    function filterQuestions(mode) {
+        const items = document.querySelectorAll('.question-item');
+        const btnAll = document.getElementById('btnFilterAll');
+        const btnErrors = document.getElementById('btnFilterErrors');
+
+        if (mode === 'errors') {
+            items.forEach(el => {
+                if (el.dataset.isCorrect === '1') {
+                    el.style.display = 'none';
+                } else {
+                    el.style.display = 'block';
+                }
+            });
+            btnErrors.classList.replace('bg-slate-100', 'bg-brand-600');
+            btnErrors.classList.replace('text-slate-700', 'text-white');
+            btnAll.classList.replace('bg-brand-600', 'bg-slate-100');
+            btnAll.classList.replace('text-white', 'text-slate-700');
+        } else {
+            items.forEach(el => el.style.display = 'block');
+            btnAll.classList.replace('bg-slate-100', 'bg-brand-600');
+            btnAll.classList.replace('text-slate-700', 'text-white');
+            btnErrors.classList.replace('bg-brand-600', 'bg-slate-100');
+            btnErrors.classList.replace('text-white', 'text-slate-700');
+        }
+    }
+</script>
+{% endblock %}

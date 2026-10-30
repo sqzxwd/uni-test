@@ -1,0 +1,9 @@
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+ignore = [
+    "B008",     # FastAPI Depends() in route arguments
+    "ASYNC230", # blocking file read in seeder initialization
+]

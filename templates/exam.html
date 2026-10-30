@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Тестирование | uni-test-sentinel{% endblock %}
+
+{% block body %}
+<div class="min-h-full flex flex-col bg-slate-100">
+
+    <!-- STICKY TOP HEADER -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all">
+        <div class="max-w-3xl mx-auto px-4 py-2.5 sm:py-3 flex items-center justify-between">
+            <!-- Student metadata -->
+            <div class="min-w-0 pr-2">
+                <div class="font-bold text-sm sm:text-base text-slate-900 truncate">
+                    {{ session.fio }}
+                </div>
+                <div class="flex items-center space-x-2 text-xs text-slate-500">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-700">
+                        {{ session.group_name }}
+                    </span>
+                    <span id="answeredCounter" class="font-medium text-brand-600">
+                        Отвечено: 0 / 20
+                    </span>
+                </div>
+            </div>
+
+            <!-- Sticky 40-minute Timer -->
+            <div id="timerContainer" class="flex items-center px-3 py-1.5 rounded-xl bg-slate-900 text-white font-mono text-sm sm:text-base font-bold shadow-sm shrink-0">
+                <svg class="w-4 h-4 mr-1.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span id="timerDisplay">40:00</span>
+            </div>
+        </div>
+
+        <!-- Live Progress Bar -->
+        <div class="w-full bg-slate-200 h-1">
+            <div id="progressBar" class="bg-brand-600 h-1 transition-all duration-300" style="width: 0%;"></div>
+        </div>
+    </header>
+
+    <!-- EXAM BODY -->
+    <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-6 sm:py-8">
+        <form id="examForm" action="/submit/{{ session.session_id }}" method="POST">
+            
+            <div class="space-y-6">
+                {% for q in session.questions %}
+                <div class="question-card bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 transition-all hover:shadow-md"
+                     id="q_card_{{ q.question_id }}" data-qid="{{ q.question_id }}">
+                    
+                    <!-- Question Header: Number & Section Tag -->
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-50 text-brand-700 border border-brand-100">
+                            Вопрос {{ q.question_order }} из 20
+                        </span>
+                        <span class="text-xs font-medium text-slate-400 truncate max-w-[200px]" title="{{ q.section_name }}">
+                            {{ q.section_name }}
+                        </span>
+                    </div>
+
+                    <!-- Question Text -->
+                    <h3 class="text-base sm:text-lg font-semibold text-slate-900 leading-snug mb-4">
+                        {{ q.question_text }}
+                    </h3>
+
+                    <!-- 4 Answer Options -->
+                    <div class="space-y-2.5">
+                        {% for opt in q.options %}
+                        <label class="option-label flex items-start p-3 sm:p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-100/70 hover:border-slate-300 cursor-pointer select-none">
+                            <input type="radio"
+                                   name="q_{{ q.question_id }}"
+                                   value="{{ opt }}"
+                                   class="option-radio mt-1 w-4 h-4 text-brand-600 border-slate-300 focus:ring-brand-500 shrink-0">
+                            <span class="ml-3 text-sm sm:text-base text-slate-800 leading-relaxed break-words">
+                                {{ opt }}
+                            </span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- SUBMIT ACTION BAR -->
+            <div class="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 pb-12">
+                <div class="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
+                    Проверьте выбранные ответы перед отправкой.<br>
+                    После нажатия кнопки «Завершить тест» изменить ответы будет невозможно.
+                </div>
+
+                <!-- Submit Button with JS double-click prevention -->
+                <button type="submit" id="submitExamBtn"
+                        class="w-full sm:w-auto min-w-[220px] flex items-center justify-center px-6 py-3.5 rounded-xl font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-lg shadow-brand-500/25 active:scale-[0.98] transition-all text-base">
+                    <span>Завершить тест</span>
+                    <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </button>
+            </div>
+        </form>
+    </main>
+</div>
+
+<!-- CLIENT JAVASCRIPT: TIMER & DOUBLE-CLICK PROTECTION & PROGRESS TRACKING -->
+<script>
+(function() {
+    const sessionId = "{{ session.session_id }}";
+    const totalQuestions = 20;
+    const examForm = document.getElementById('examForm');
+    const submitBtn = document.getElementById('submitExamBtn');
+    const answeredCounter = document.getElementById('answeredCounter');
+    const progressBar = document.getElementById('progressBar');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const timerContainer = document.getElementById('timerContainer');
+
+    let isSubmitting = false;
+
+    // --- 1. TRACK ANSWERED QUESTIONS ---
+    function updateProgress() {
+        const questionCards = document.querySelectorAll('.question-card');
+        let answeredCount = 0;
+
+        questionCards.forEach(card => {
+            const checked = card.querySelector('input[type="radio"]:checked');
+            const labels = card.querySelectorAll('.option-label');
+            
+            // Visual active styles on label
+            labels.forEach(lbl => {
+                const radio = lbl.querySelector('input[type="radio"]');
+                if (radio.checked) {
+                    lbl.classList.remove('bg-slate-50/50', 'border-slate-200');
+                    lbl.classList.add('bg-brand-50', 'border-brand-500', 'ring-1', 'ring-brand-500');
+                } else {
+                    lbl.classList.remove('bg-brand-50', 'border-brand-500', 'ring-1', 'ring-brand-500');
+                    lbl.classList.add('bg-slate-50/50', 'border-slate-200');
+                }
+            });
+
+            if (checked) {
+                answeredCount++;
+                card.classList.add('border-brand-200');
+            } else {
+                card.classList.remove('border-brand-200');
+            }
+        });
+
+        answeredCounter.textContent = `Отвечено: ${answeredCount} / ${totalQuestions}`;
+        const pct = Math.round((answeredCount / totalQuestions) * 100);
+        progressBar.style.width = pct + '%';
+        return answeredCount;
+    }
+
+    // Attach listeners to all radio buttons
+    document.querySelectorAll('.option-radio').forEach(radio => {
+        radio.addEventListener('change', updateProgress);
+    });
+    updateProgress();
+
+    // --- 2. 40-MINUTE STICKY TIMER (2400 SECONDS) WITH LOCALSTORAGE PERSISTENCE ---
+    const TOTAL_TIME_SECONDS = 40 * 60; // 40 minutes = 2400 seconds
+    const storageKey = `uni_test_sentinel_timer_${sessionId}`;
+
+    let startTime = localStorage.getItem(storageKey);
+    if (!startTime) {
+        startTime = Date.now();
+        localStorage.setItem(storageKey, startTime);
+    } else {
+        startTime = parseInt(startTime, 10);
+    }
+
+    function tickTimer() {
+        if (isSubmitting) return;
+
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        const remainingSeconds = Math.max(0, TOTAL_TIME_SECONDS - elapsedSeconds);
+
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+        const fmtMinutes = String(minutes).padStart(2, '0');
+        const fmtSeconds = String(seconds).padStart(2, '0');
+
+        timerDisplay.textContent = `${fmtMinutes}:${fmtSeconds}`;
+
+        // Color warnings
+        if (remainingSeconds <= 300 && remainingSeconds > 60) {
+            // Under 5 minutes: yellow/orange alert
+            timerContainer.classList.remove('bg-slate-900');
+            timerContainer.classList.add('bg-amber-600', 'animate-pulse');
+        } else if (remainingSeconds <= 60) {
+            // Under 1 minute: red critical alert
+            timerContainer.classList.remove('bg-slate-900', 'bg-amber-600');
+            timerContainer.classList.add('bg-red-600', 'animate-pulse');
+        }
+
+        if (remainingSeconds <= 0) {
+            // TIME IS UP: Auto-submit test immediately!
+            clearInterval(timerInterval);
+            alert('Время тестирования (40 минут) истекло! Ваши ответы автоматически отправляются.');
+            submitFormDirectly();
+        }
+    }
+
+    const timerInterval = setInterval(tickTimer, 1000);
+    tickTimer();
+
+    // --- 3. SUBMISSION HANDLING & DOUBLE-CLICK LOCK ---
+    function lockSubmitButton() {
+        isSubmitting = true;
+        submitBtn.disabled = true;
+        submitBtn.classList.remove('hover:bg-brand-700', 'active:scale-[0.98]');
+        submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+        submitBtn.innerHTML = `
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            Отправка результатов...
+        `;
+    }
+
+    function submitFormDirectly() {
+        if (isSubmitting) return;
+        lockSubmitButton();
+        localStorage.removeItem(storageKey);
+        examForm.submit();
+    }
+
+    examForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (isSubmitting) return;
+
+        const answered = updateProgress();
+        if (answered < totalQuestions) {
+            const unanswered = totalQuestions - answered;
+            const confirmMsg = `Внимание: вы ответили на ${answered} из ${totalQuestions} вопросов (${unanswered} не заполнено).\n\nВы уверены, что хотите завершить тест?`;
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+        }
+
+        submitFormDirectly();
+    });
+
+})();
+</script>
+{% endblock %}
