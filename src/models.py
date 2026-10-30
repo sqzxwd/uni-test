@@ -23,12 +23,13 @@ SECTION_DISTRIBUTION: dict[int, int] = {
 }
 
 ALLOWED_GROUPS: list[str] = [
-    "Группа 1",
-    "Группа 2",
-    "Группа 3",
-    "Группа 4",
-    "Группа 5",
-    "Группа 6",
+    "161-51",
+    "161-55",
+    "161-61",
+    "161-65",
+    "161-71",
+    "161-81",
+    "161-85",
 ]
 
 
@@ -71,6 +72,7 @@ class TestSessionDetail(BaseModel):
     grade: int
     grade_label: str
     percentage: float
+    focus_loss_count: int = 0
     is_completed: bool
     created_at: Any
     questions: list[dict[str, Any]] = []

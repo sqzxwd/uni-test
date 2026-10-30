@@ -178,7 +178,7 @@ async def test_session_lifecycle_and_double_submit_protection():
         sid = await create_test_session(
             db=db,
             fio="Тестовый Студент Сергеевич",
-            group_name="Группа 1",
+            group_name="161-51",
             test_date="2026-10-30",
         )
         assert sid
@@ -213,14 +213,15 @@ async def test_session_lifecycle_and_double_submit_protection():
                 # 2 wrong answers
                 submitted_answers[qid] = row["distractor1"]
 
-        # 4. Grade submission
-        result = await grade_session_submission(db, sid, submitted_answers)
+        # 4. Grade submission with silent focus_loss_count = 2
+        result = await grade_session_submission(db, sid, submitted_answers, focus_loss_count=2)
         assert result["score"] == 9.0
         assert result["total"] == 10.0
         assert result["grade"] == 5
         assert result["is_completed"] is True
         assert result["already_submitted"] is False
         assert result["formatted_score"] == "9 / 10"
+        assert result["focus_loss_count"] == 2
 
         # 5. Test Double-Submit Protection:
         # A second submission attempt with 0 answers must NOT downgrade or alter the saved grade!
@@ -231,13 +232,14 @@ async def test_session_lifecycle_and_double_submit_protection():
 
         # Verify DB directly
         cursor = await db.execute(
-            "SELECT score, grade, is_completed FROM test_sessions WHERE session_id = ?;",
+            "SELECT score, grade, is_completed, focus_loss_count FROM test_sessions WHERE session_id = ?;",
             (sid,),
         )
         db_session = await cursor.fetchone()
         assert float(db_session["score"]) == 9.0
         assert db_session["grade"] == 5
         assert db_session["is_completed"] == 1
+        assert db_session["focus_loss_count"] == 2
 
 
 # ==========================================
@@ -262,7 +264,7 @@ def test_http_index_and_registration_flow():
         "/start",
         data={
             "fio": "Иванов",
-            "group_name": "Группа 1",
+            "group_name": "161-51",
             "test_date": "2026-10-30",
         },
     )
@@ -273,7 +275,7 @@ def test_http_index_and_registration_flow():
         "/start",
         data={
             "fio": "Алексеев Алексей Алексеевич",
-            "group_name": "Группа 2",
+            "group_name": "161-55",
             "test_date": "2026-10-30",
         },
         follow_redirects=False,
@@ -283,19 +285,20 @@ def test_http_index_and_registration_flow():
     assert redirect_url.startswith("/exam/")
     session_id = redirect_url.split("/exam/")[1]
 
-    # 4. GET /exam/{session_id} - check 40:00 timer display and 2400 seconds
+    # 4. GET /exam/{session_id} - check 40:00 timer display and anti-cheat elements
     res_exam = client.get(f"/exam/{session_id}")
     assert res_exam.status_code == 200
     assert "Алексеев Алексей Алексеевич" in res_exam.text
-    assert "Группа 2" in res_exam.text
+    assert "161-55" in res_exam.text
     assert "40:00" in res_exam.text
-    assert "40 * 60" in res_exam.text
+    assert "focus_loss_count" in res_exam.text
+    assert "exam-privacy-shield" in res_exam.text
     assert "Завершить тест" in res_exam.text
 
-    # 5. POST /submit/{session_id}
+    # 5. POST /submit/{session_id} with focus_loss_count
     res_submit = client.post(
         f"/submit/{session_id}",
-        data={},  # submit with empty answers
+        data={"focus_loss_count": "1"},
         follow_redirects=False,
     )
     assert res_submit.status_code == 303
@@ -313,15 +316,18 @@ def test_http_index_and_registration_flow():
 
 
 def test_admin_screen_and_qr_with_target_url():
-    """Tests projector screen with tunnel input and target_url query parameter for QR."""
+    """Tests projector screen with 3 columns, grading criteria and target_url query parameter."""
     client = TestClient(app)
 
-    # 1. Screen template contains tunnel input and localStorage key
+    # 1. Screen template contains 3-column items, tunnel input, and grading criteria
     res_screen = client.get("/admin/screen")
     assert res_screen.status_code == 200
     assert "Экран аудитории" in res_screen.text
+    assert "7 учебных групп" in res_screen.text
     assert "tunnelUrlInput" in res_screen.text
-    assert "btnUpdateQr" in res_screen.text
+    assert "Критерии оценивания" in res_screen.text
+    assert "9.0 – 10.0" in res_screen.text
+    assert "0.0 – 4.5" in res_screen.text
     assert "uni_test_tunnel_url" in res_screen.text
 
     # 2. QR code with target_url parameter (Cloudflare tunnel)
@@ -363,10 +369,11 @@ def test_admin_dashboard_auth_and_export():
     assert res_dash.status_code == 200
     assert "Панель преподавателя" in res_dash.text
     assert "Сдало студентов" in res_dash.text
+    assert "Сворачиваний" in res_dash.text
     assert "из 10.0" in res_dash.text
 
     # 4. Filter by group
-    res_filter = client.get("/admin?group=Группа+1")
+    res_filter = client.get("/admin?group=161-51")
     assert res_filter.status_code == 200
 
     # 5. Export to Excel

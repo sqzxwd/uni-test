@@ -2,8 +2,37 @@
 
 {% block title %}Тестирование | uni-test-sentinel{% endblock %}
 
+{% block head %}
+<style>
+    /* Anti-cheat: complete selection and callout blocking on mobile & desktop */
+    *, *::before, *::after {
+        -webkit-touch-callout: none !important;
+        -webkit-user-select: none !important;
+        user-select: none !important;
+    }
+    input, button, select, textarea {
+        -webkit-user-select: auto;
+        user-select: auto;
+    }
+    body, .question-card, .option-label {
+        -webkit-touch-callout: none !important;
+        -webkit-user-select: none !important;
+        user-select: none !important;
+    }
+
+    /* Silent privacy blur when student leaves window or splits screen */
+    .exam-privacy-shield {
+        filter: blur(25px) grayscale(90%) !important;
+        opacity: 0.12 !important;
+        pointer-events: none !important;
+        user-select: none !important;
+        transition: filter 0.05s ease, opacity 0.05s ease !important;
+    }
+</style>
+{% endblock %}
+
 {% block body %}
-<div class="min-h-full flex flex-col bg-slate-100">
+<div class="min-h-full flex flex-col bg-slate-100 select-none">
 
     <!-- STICKY TOP HEADER -->
     <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all">
@@ -15,7 +44,7 @@
                 </div>
                 <div class="flex items-center space-x-2 text-xs text-slate-500">
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-700">
-                        {{ session.group_name }}
+                        Группа {{ session.group_name }}
                     </span>
                     <span id="answeredCounter" class="font-medium text-brand-600">
                         Отвечено: 0 / 20
@@ -41,8 +70,10 @@
     <!-- EXAM BODY -->
     <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-6 sm:py-8">
         <form id="examForm" action="/submit/{{ session.session_id }}" method="POST">
+            <!-- Hidden Focus Loss / Anti-Cheat Tracker -->
+            <input type="hidden" name="focus_loss_count" id="focusLossCountInput" value="0">
             
-            <div class="space-y-6">
+            <div id="questionsContainer" class="space-y-6 transition-all duration-75">
                 {% for q in session.questions %}
                 <div class="question-card bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 transition-all hover:shadow-md"
                      id="q_card_{{ q.question_id }}" data-qid="{{ q.question_id }}">
@@ -100,7 +131,7 @@
     </main>
 </div>
 
-<!-- CLIENT JAVASCRIPT: TIMER & DOUBLE-CLICK PROTECTION & PROGRESS TRACKING -->
+<!-- CLIENT JAVASCRIPT: TIMER, ANTI-CHEAT & DOUBLE-CLICK PROTECTION -->
 <script>
 (function() {
     const sessionId = "{{ session.session_id }}";
@@ -111,10 +142,74 @@
     const progressBar = document.getElementById('progressBar');
     const timerDisplay = document.getElementById('timerDisplay');
     const timerContainer = document.getElementById('timerContainer');
+    const questionsContainer = document.getElementById('questionsContainer');
+    const focusLossInput = document.getElementById('focusLossCountInput');
 
     let isSubmitting = false;
 
-    // --- 1. TRACK ANSWERED QUESTIONS ---
+    // --- 1. SILENT ANTI-CHEAT: BLOCK COPY, CUT, CONTEXTMENU, SELECT, PINCH ---
+    ['contextmenu', 'copy', 'cut', 'paste', 'selectstart', 'dragstart'].forEach(function(evt) {
+        document.addEventListener(evt, function(e) {
+            e.preventDefault();
+            return false;
+        }, { passive: false });
+    });
+
+    document.addEventListener('pointerdown', function(e) {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') {
+            e.target.style.webkitUserSelect = 'none';
+        }
+    });
+
+    // Disable multi-touch zoom gestures
+    document.addEventListener('gesturestart', function(e) {
+        e.preventDefault();
+    });
+
+    // --- 2. SILENT FOCUS LOSS PROTECTION & PRIVACY BLUR (SPLIT-SCREEN, APP-SWITCH) ---
+    let focusLossCount = 0;
+    let isPrivacyShieldActive = false;
+
+    function activatePrivacyShield() {
+        if (isSubmitting) return;
+        if (!isPrivacyShieldActive) {
+            isPrivacyShieldActive = true;
+            focusLossCount++;
+            if (focusLossInput) {
+                focusLossInput.value = focusLossCount;
+            }
+            if (questionsContainer) {
+                questionsContainer.classList.add('exam-privacy-shield');
+            }
+        }
+    }
+
+    function deactivatePrivacyShield() {
+        if (isPrivacyShieldActive) {
+            isPrivacyShieldActive = false;
+            if (questionsContainer) {
+                questionsContainer.classList.remove('exam-privacy-shield');
+            }
+        }
+    }
+
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden || document.visibilityState === 'hidden') {
+            activatePrivacyShield();
+        } else {
+            deactivatePrivacyShield();
+        }
+    });
+
+    window.addEventListener('blur', function() {
+        activatePrivacyShield();
+    });
+
+    window.addEventListener('focus', function() {
+        deactivatePrivacyShield();
+    });
+
+    // --- 3. TRACK ANSWERED QUESTIONS ---
     function updateProgress() {
         const questionCards = document.querySelectorAll('.question-card');
         let answeredCount = 0;
@@ -123,7 +218,6 @@
             const checked = card.querySelector('input[type="radio"]:checked');
             const labels = card.querySelectorAll('.option-label');
             
-            // Visual active styles on label
             labels.forEach(lbl => {
                 const radio = lbl.querySelector('input[type="radio"]');
                 if (radio.checked) {
@@ -149,13 +243,12 @@
         return answeredCount;
     }
 
-    // Attach listeners to all radio buttons
     document.querySelectorAll('.option-radio').forEach(radio => {
         radio.addEventListener('change', updateProgress);
     });
     updateProgress();
 
-    // --- 2. 40-MINUTE STICKY TIMER (2400 SECONDS) WITH LOCALSTORAGE PERSISTENCE ---
+    // --- 4. 40-MINUTE STICKY TIMER (2400 SECONDS) WITH LOCALSTORAGE ---
     const TOTAL_TIME_SECONDS = 40 * 60; // 40 minutes = 2400 seconds
     const storageKey = `uni_test_sentinel_timer_${sessionId}`;
 
@@ -180,21 +273,16 @@
 
         timerDisplay.textContent = `${fmtMinutes}:${fmtSeconds}`;
 
-        // Color warnings
         if (remainingSeconds <= 300 && remainingSeconds > 60) {
-            // Under 5 minutes: yellow/orange alert
             timerContainer.classList.remove('bg-slate-900');
             timerContainer.classList.add('bg-amber-600', 'animate-pulse');
         } else if (remainingSeconds <= 60) {
-            // Under 1 minute: red critical alert
             timerContainer.classList.remove('bg-slate-900', 'bg-amber-600');
             timerContainer.classList.add('bg-red-600', 'animate-pulse');
         }
 
         if (remainingSeconds <= 0) {
-            // TIME IS UP: Auto-submit test immediately!
             clearInterval(timerInterval);
-            alert('Время тестирования (40 минут) истекло! Ваши ответы автоматически отправляются.');
             submitFormDirectly();
         }
     }
@@ -202,7 +290,7 @@
     const timerInterval = setInterval(tickTimer, 1000);
     tickTimer();
 
-    // --- 3. SUBMISSION HANDLING & DOUBLE-CLICK LOCK ---
+    // --- 5. SUBMISSION HANDLING & DOUBLE-CLICK LOCK ---
     function lockSubmitButton() {
         isSubmitting = true;
         submitBtn.disabled = true;

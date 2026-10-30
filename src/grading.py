@@ -53,6 +53,7 @@ async def grade_session_submission(
     db: aiosqlite.Connection,
     session_id: str,
     submitted_answers: dict[int, str],
+    focus_loss_count: int = 0,
 ) -> dict[str, Any]:
     """Grades a student's session submission in an atomic transaction.
 
@@ -60,7 +61,7 @@ async def grade_session_submission(
     """
     # Check session status
     cursor = await db.execute(
-        "SELECT session_id, fio, group_name, test_date, score, total, grade, is_completed "
+        "SELECT session_id, fio, group_name, test_date, score, total, grade, is_completed, focus_loss_count "
         "FROM test_sessions WHERE session_id = ?;",
         (session_id,),
     )
@@ -80,6 +81,7 @@ async def grade_session_submission(
             "grade_label": get_grade_label(session["grade"]),
             "percentage": calculate_percentage(float(session["score"]), float(session["total"])),
             "formatted_score": format_score(float(session["score"]), float(session["total"])),
+            "focus_loss_count": session["focus_loss_count"] or 0,
             "is_completed": True,
             "already_submitted": True,
         }
@@ -136,10 +138,10 @@ async def grade_session_submission(
     await db.execute(
         """
         UPDATE test_sessions
-        SET score = ?, total = ?, grade = ?, is_completed = 1
+        SET score = ?, total = ?, grade = ?, is_completed = 1, focus_loss_count = ?
         WHERE session_id = ?;
         """,
-        (score, total, grade, session_id),
+        (score, total, grade, focus_loss_count, session_id),
     )
     await db.commit()
 
@@ -153,6 +155,7 @@ async def grade_session_submission(
         "grade_label": get_grade_label(grade),
         "percentage": calculate_percentage(score, total),
         "formatted_score": format_score(score, total),
+        "focus_loss_count": focus_loss_count,
         "is_completed": True,
         "already_submitted": False,
     }

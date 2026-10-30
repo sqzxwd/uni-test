@@ -144,7 +144,7 @@ async def get_session_exam_data(db: aiosqlite.Connection, session_id: str) -> di
     """Fetches session metadata and the ordered list of 20 questions for student exam interface."""
     cursor = await db.execute(
         """
-        SELECT session_id, fio, group_name, test_date, score, total, grade, is_completed, created_at
+        SELECT session_id, fio, group_name, test_date, score, total, grade, is_completed, focus_loss_count, created_at
         FROM test_sessions
         WHERE session_id = ?;
         """,
@@ -201,6 +201,7 @@ async def get_session_exam_data(db: aiosqlite.Connection, session_id: str) -> di
         "grade": session["grade"],
         "grade_label": get_grade_label(session["grade"]),
         "percentage": calculate_percentage(score_val, total_val),
+        "focus_loss_count": session["focus_loss_count"] or 0,
         "created_at": session["created_at"],
         "questions": questions,
     }

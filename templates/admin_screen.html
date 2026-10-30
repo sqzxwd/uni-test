@@ -3,10 +3,10 @@
 {% block title %}Экран аудитории | uni-test-sentinel{% endblock %}
 
 {% block body %}
-<div class="min-h-full flex flex-col justify-between bg-slate-900 text-white p-6 sm:p-10 select-none">
+<div class="min-h-full flex flex-col justify-between bg-slate-900 text-white p-4 sm:p-6 lg:p-8 select-none">
     
     <!-- Top Bar: Course Title, Tunnel Config & Time -->
-    <header class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-4 gap-4">
+    <header class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-4">
         <div class="flex items-center space-x-3">
             <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-brand-600 font-black text-xl shadow-md shadow-brand-500/20">
                 IT
@@ -16,7 +16,7 @@
                     Входное тестирование по дисциплине «Информационные технологии»
                 </h1>
                 <p class="text-xs sm:text-sm text-slate-400">
-                    1 курс • Поток 180 студентов • 6 учебных групп
+                    1 курс • 7 учебных групп • Поток 180 студентов
                 </p>
             </div>
         </div>
@@ -32,7 +32,7 @@
     </header>
 
     <!-- Cloudflare Tunnel Configuration Bar -->
-    <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-3 sm:p-4 my-3 flex flex-wrap items-center justify-between gap-3 shadow-md">
+    <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-3 sm:p-3.5 my-3 flex flex-wrap items-center justify-between gap-3 shadow-md">
         <div class="flex items-center space-x-2 text-xs sm:text-sm text-slate-300">
             <svg class="w-4 h-4 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
@@ -59,82 +59,149 @@
         </div>
     </div>
 
-    <!-- Main Content: Giant QR Code & Giant Instructions -->
-    <main class="flex-1 flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-16 py-4">
+    <!-- Main Content: Three-Column Grid -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch py-3">
         
-        <!-- Large QR Code Column -->
-        <div class="flex flex-col items-center bg-white p-6 sm:p-8 rounded-3xl shadow-2xl shadow-brand-500/10 text-slate-900 shrink-0">
+        <!-- COLUMN 1: Large QR Code (Col Span 4) -->
+        <div class="lg:col-span-4 flex flex-col items-center justify-center bg-white p-6 rounded-3xl shadow-2xl text-slate-900">
             <div class="relative p-2 bg-white rounded-2xl border-4 border-brand-500">
                 <img id="qrImage"
                      src="/admin/qr?target_url={{ target_url | urlencode }}"
                      alt="QR-код для подключения к тестированию"
-                     class="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 object-contain block transition-opacity duration-200">
+                     class="w-60 h-60 sm:w-72 sm:h-72 lg:w-80 lg:h-80 object-contain block transition-opacity duration-200">
             </div>
 
-            <!-- Target URL for direct typing -->
-            <div class="mt-4 text-center">
-                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <div class="mt-4 text-center w-full px-2">
+                <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                     Прямой адрес подключения:
                 </div>
                 <a id="qrUrlLink" href="{{ target_url }}" target="_blank"
-                   class="font-mono text-base sm:text-xl font-black text-brand-700 hover:text-brand-800 tracking-tight mt-0.5 break-all block">
+                   class="font-mono text-sm sm:text-lg font-black text-brand-700 hover:text-brand-800 tracking-tight mt-0.5 break-all block">
                     {{ target_url }}
                 </a>
             </div>
         </div>
 
-        <!-- Instructions Column -->
-        <div class="max-w-xl space-y-5">
-            <div class="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-brand-900/60 text-brand-300 border border-brand-700/50">
-                Инструкция для студентов
+        <!-- COLUMN 2: Instructions & Entry Steps (Col Span 5) -->
+        <div class="lg:col-span-5 flex flex-col justify-center space-y-3.5">
+            <div>
+                <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-brand-900/60 text-brand-300 border border-brand-700/50">
+                    Инструкция для студентов
+                </span>
+                <h2 class="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight mt-1.5">
+                    Отсканируйте QR-код для начала теста
+                </h2>
             </div>
 
-            <h2 class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
-                Наведите камеру смартфона на QR-код для входа в тест
-            </h2>
-
-            <div class="space-y-3.5">
-                <div class="flex items-start space-x-4 p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/60">
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-brand-600 text-white font-bold shrink-0 text-base">
+            <div class="space-y-3">
+                <div class="flex items-start space-x-3.5 p-3 rounded-2xl bg-slate-800/80 border border-slate-700/60">
+                    <div class="flex items-center justify-center w-7 h-7 rounded-full bg-brand-600 text-white font-bold shrink-0 text-sm">
                         1
                     </div>
                     <div>
-                        <div class="font-bold text-white text-base">Отсканируйте QR-код</div>
-                        <div class="text-xs sm:text-sm text-slate-300">Используйте камеру смартфона по Wi-Fi или мобильной сети (LTE).</div>
+                        <div class="font-bold text-white text-sm sm:text-base">Отсканируйте QR-код</div>
+                        <div class="text-xs text-slate-300">Камерой смартфона по Wi-Fi или мобильной сети LTE.</div>
                     </div>
                 </div>
 
-                <div class="flex items-start space-x-4 p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/60">
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-brand-600 text-white font-bold shrink-0 text-base">
+                <div class="flex items-start space-x-3.5 p-3 rounded-2xl bg-slate-800/80 border border-slate-700/60">
+                    <div class="flex items-center justify-center w-7 h-7 rounded-full bg-brand-600 text-white font-bold shrink-0 text-sm">
                         2
                     </div>
                     <div>
-                        <div class="font-bold text-white text-base">Заполните ФИО и группу</div>
-                        <div class="text-xs sm:text-sm text-slate-300">Выберите из списка вашу группу (Группы 1–6) и укажите полное имя.</div>
+                        <div class="font-bold text-white text-sm sm:text-base">Заполните ФИО и группу</div>
+                        <div class="text-xs text-slate-300">Выберите из списка вашу группу (161-51 ... 161-85).</div>
                     </div>
                 </div>
 
-                <div class="flex items-start space-x-4 p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/60">
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-brand-600 text-white font-bold shrink-0 text-base">
+                <div class="flex items-start space-x-3.5 p-3 rounded-2xl bg-slate-800/80 border border-slate-700/60">
+                    <div class="flex items-center justify-center w-7 h-7 rounded-full bg-brand-600 text-white font-bold shrink-0 text-sm">
                         3
                     </div>
                     <div>
-                        <div class="font-bold text-white text-base">20 вопросов • 40 минут • до 10.0 баллов</div>
-                        <div class="text-xs sm:text-sm text-slate-300">Сбалансированный билет. По 0.5 балла за каждый правильный ответ.</div>
+                        <div class="font-bold text-white text-sm sm:text-base">20 вопросов • 40 минут</div>
+                        <div class="text-xs text-slate-300">Индивидуальный билет, варианты ответов перемешаны.</div>
                     </div>
                 </div>
 
-                <div class="flex items-start space-x-4 p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/60">
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-brand-600 text-white font-bold shrink-0 text-base">
+                <div class="flex items-start space-x-3.5 p-3 rounded-2xl bg-slate-800/80 border border-slate-700/60">
+                    <div class="flex items-center justify-center w-7 h-7 rounded-full bg-brand-600 text-white font-bold shrink-0 text-sm">
                         4
                     </div>
                     <div>
-                        <div class="font-bold text-white text-base">Нажмите «Завершить тест»</div>
-                        <div class="text-xs sm:text-sm text-slate-300">При истечении 40 минут ответы отправятся автоматически.</div>
+                        <div class="font-bold text-white text-sm sm:text-base">Нажмите «Завершить тест»</div>
+                        <div class="text-xs text-slate-300">Баллы и оценка зафиксируются в ведомости преподавателя.</div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- COLUMN 3: Grading Criteria Card (Col Span 3) -->
+        <div class="lg:col-span-3 flex flex-col justify-between bg-slate-800/90 border border-slate-700 p-5 rounded-3xl shadow-xl">
+            <div>
+                <div class="flex items-center space-x-2 pb-3 border-b border-slate-700/80">
+                    <svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <h3 class="text-base font-bold text-white uppercase tracking-wider">
+                        Критерии оценивания
+                    </h3>
+                </div>
+
+                <!-- Grading Scale List -->
+                <div class="space-y-2.5 mt-4">
+                    <!-- Grade 5 (Green) -->
+                    <div class="p-3 rounded-2xl bg-emerald-950/70 border border-emerald-500/40 flex items-center justify-between">
+                        <div>
+                            <div class="text-xs text-emerald-300 font-semibold">9.0 – 10.0 баллов</div>
+                            <div class="text-sm font-bold text-emerald-100">Оценка 5 (отлично)</div>
+                        </div>
+                        <span class="w-8 h-8 rounded-xl bg-emerald-600 font-black text-white flex items-center justify-center text-sm shadow-sm">
+                            5
+                        </span>
+                    </div>
+
+                    <!-- Grade 4 (Blue) -->
+                    <div class="p-3 rounded-2xl bg-blue-950/70 border border-blue-500/40 flex items-center justify-between">
+                        <div>
+                            <div class="text-xs text-blue-300 font-semibold">7.0 – 8.5 баллов</div>
+                            <div class="text-sm font-bold text-blue-100">Оценка 4 (хорошо)</div>
+                        </div>
+                        <span class="w-8 h-8 rounded-xl bg-blue-600 font-black text-white flex items-center justify-center text-sm shadow-sm">
+                            4
+                        </span>
+                    </div>
+
+                    <!-- Grade 3 (Yellow) -->
+                    <div class="p-3 rounded-2xl bg-amber-950/70 border border-amber-500/40 flex items-center justify-between">
+                        <div>
+                            <div class="text-xs text-amber-300 font-semibold">5.0 – 6.5 баллов</div>
+                            <div class="text-sm font-bold text-amber-100">Оценка 3 (удовл.)</div>
+                        </div>
+                        <span class="w-8 h-8 rounded-xl bg-amber-600 font-black text-white flex items-center justify-center text-sm shadow-sm">
+                            3
+                        </span>
+                    </div>
+
+                    <!-- Grade 2 (Red) -->
+                    <div class="p-3 rounded-2xl bg-rose-950/70 border border-rose-500/40 flex items-center justify-between">
+                        <div>
+                            <div class="text-xs text-rose-300 font-semibold">0.0 – 4.5 баллов</div>
+                            <div class="text-sm font-bold text-rose-100">Оценка 2 (неуд.)</div>
+                        </div>
+                        <span class="w-8 h-8 rounded-xl bg-rose-600 font-black text-white flex items-center justify-center text-sm shadow-sm">
+                            2
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footnote -->
+            <div class="mt-4 pt-3 border-t border-slate-700/80 text-[11px] text-slate-400 leading-snug">
+                <span class="text-slate-300 font-medium">Сноска:</span> 20 вопросов • по 0.5 балла • максимум 10.0 баллов.
+            </div>
+        </div>
+
     </main>
 
     <!-- Bottom Status Bar -->

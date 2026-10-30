@@ -64,6 +64,7 @@ async def init_db(db_path: str = DB_PATH) -> None:
             total REAL DEFAULT 10.0,
             grade INTEGER DEFAULT 2,
             is_completed INTEGER DEFAULT 0,
+            focus_loss_count INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """)
@@ -81,6 +82,15 @@ async def init_db(db_path: str = DB_PATH) -> None:
             FOREIGN KEY (question_id) REFERENCES questions (id) ON DELETE RESTRICT
         );
         """)
+
+        # Ensure focus_loss_count column exists for existing tables
+        try:
+            await db.execute(
+                "ALTER TABLE test_sessions ADD COLUMN focus_loss_count INTEGER DEFAULT 0;"
+            )
+        except aiosqlite.OperationalError:
+            # Column already exists
+            pass
 
         # Performance indexes
         await db.execute("CREATE INDEX IF NOT EXISTS idx_questions_section ON questions(section);")

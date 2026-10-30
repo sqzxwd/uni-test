@@ -222,11 +222,18 @@ async def submit_exam(
             except ValueError:
                 continue
 
+    focus_loss_raw = form_data.get("focus_loss_count", 0)
+    try:
+        focus_loss_count = max(0, int(focus_loss_raw))
+    except ValueError, TypeError:
+        focus_loss_count = 0
+
     try:
         await grade_session_submission(
             db=db,
             session_id=session_id,
             submitted_answers=submitted_answers,
+            focus_loss_count=focus_loss_count,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -353,7 +360,7 @@ async def admin_dashboard(
 ):
     """Teacher dashboard with group filters, sorting, and mistake inspection."""
     query = """
-    SELECT session_id, fio, group_name, test_date, score, total, grade, is_completed, created_at
+    SELECT session_id, fio, group_name, test_date, score, total, grade, is_completed, focus_loss_count, created_at
     FROM test_sessions
     WHERE is_completed = 1
     """
@@ -406,6 +413,7 @@ async def admin_dashboard(
                 "formatted_score": format_score(sc, tot),
                 "percentage": pct,
                 "grade": grd,
+                "focus_loss_count": r["focus_loss_count"] or 0,
                 "created_at": r["created_at"],
             }
         )
@@ -443,7 +451,7 @@ async def admin_session_detail(
     """Detailed view of a student's answers, errors, and correct choices."""
     cursor = await db.execute(
         """
-        SELECT session_id, fio, group_name, test_date, score, total, grade, is_completed, created_at
+        SELECT session_id, fio, group_name, test_date, score, total, grade, is_completed, focus_loss_count, created_at
         FROM test_sessions
         WHERE session_id = ?;
         """,
@@ -498,6 +506,7 @@ async def admin_session_detail(
         "formatted_score": format_score(sc, tot),
         "grade": sess_row["grade"],
         "percentage": calculate_percentage(sc, tot),
+        "focus_loss_count": sess_row["focus_loss_count"] or 0,
         "questions": questions,
     }
 
