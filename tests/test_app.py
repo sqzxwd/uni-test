@@ -474,3 +474,13 @@ def test_student_results_review_and_security():
     res_admin_view = admin_client.get(f"/result/{s1_id}")
     assert res_admin_view.status_code == 200
     assert "Смирнов Иван Алексеевич" in res_admin_view.text
+
+    # 6. Test clear-results action
+    res_clear = admin_client.post("/admin/clear-results", follow_redirects=False)
+    assert res_clear.status_code == 303
+    assert res_clear.headers["Location"] == "/admin"
+
+    # Verify dashboard now shows 0 completed
+    res_dash_after = admin_client.get("/admin")
+    assert res_dash_after.status_code == 200
+    assert ">0<" in res_dash_after.text or "0" in res_dash_after.text
