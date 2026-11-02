@@ -655,3 +655,19 @@ async def admin_export_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@app.get("/admin/clear-all")
+def admin_clear_all():
+    import os, sqlite3
+    from starlette.responses import HTMLResponse
+    for db in ["test_platform.db", "data/test_platform.db", "src/test_platform.db"]:
+        if os.path.exists(db):
+            con = sqlite3.connect(db)
+            cur = con.cursor()
+            for t in ["session_questions", "test_sessions"]:
+                try: cur.execute(f"DELETE FROM {t}")
+                except: pass
+            con.commit()
+            con.close()
+    return HTMLResponse("<h2>База успешно очищена! Все попытки удалены.</h2><p><a href='/admin'>Вернуться в панель администратора</a></p>")
