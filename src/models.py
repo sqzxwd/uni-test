@@ -40,6 +40,7 @@ class QuestionCreate(BaseModel):
     distractor1: str
     distractor2: str
     distractor3: str
+    explanation: str | None = None
 
 
 class QuestionRecord(QuestionCreate):
@@ -62,6 +63,22 @@ class ExamQuestionItem(BaseModel):
     selected_answer: str | None = None
 
 
+class QuestionResultItem(BaseModel):
+    question_id: int
+    question_order: int
+    section: int
+    section_name: str
+    question_text: str
+    options: list[str]
+    selected_answer: str | None = None
+    correct_answer: str
+    is_correct: bool
+    correctness: str  # "correct", "incorrect", "partial", "unanswered"
+    correctness_label: str  # "Правильно", "Неправильно", "Частично", "Нет ответа"
+    points: float
+    explanation: str | None = None
+
+
 class TestSessionDetail(BaseModel):
     session_id: str
     fio: str
@@ -76,3 +93,22 @@ class TestSessionDetail(BaseModel):
     is_completed: bool
     created_at: Any
     questions: list[dict[str, Any]] = []
+
+
+class TestResultDetail(BaseModel):
+    session_id: str
+    fio: str
+    group_name: str
+    test_date: str
+    score: float = 0.0
+    total: float = 10.0
+    formatted_score: str
+    percentage: float
+    grade: int
+    grade_label: str
+    focus_loss_count: int = 0
+    is_completed: bool
+    created_at: Any
+    correct_count: int = 0
+    error_count: int = 0
+    questions: list[QuestionResultItem] = []

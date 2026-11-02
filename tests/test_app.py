@@ -399,3 +399,78 @@ def test_admin_dashboard_auth_and_export():
         "Процент",
         "Оценка",
     ]
+
+
+def test_student_results_review_and_security():
+    """Tests the detailed results breakdown screen and cookie security isolation."""
+    client = TestClient(app)
+
+    # 1. Register student 1
+    res1 = client.post(
+        "/start",
+        data={
+            "fio": "Смирнов Иван Алексеевич",
+            "group_name": "161-61",
+            "test_date": "2026-11-01",
+        },
+        follow_redirects=False,
+    )
+    assert res1.status_code == 303
+    s1_id = res1.headers["Location"].split("/exam/")[1]
+
+    # Submit test with answers
+    exam1 = client.get(f"/exam/{s1_id}")
+    assert exam1.status_code == 200
+
+    # Submit 15 questions
+    submit_data = {"focus_loss_count": "0"}
+    res1_sub = client.post(
+        f"/submit/{s1_id}",
+        data=submit_data,
+        follow_redirects=False,
+    )
+    assert res1_sub.status_code == 303
+    assert res1_sub.headers["Location"] == "/finish"
+
+    # 2. Check /finish renders detailed review
+    res1_finish = client.get("/finish")
+    assert res1_finish.status_code == 200
+    assert "Тест успешно сдан! Разбор работы" in res1_finish.text
+    assert "Смирнов Иван Алексеевич" in res1_finish.text
+    assert "161-61" in res1_finish.text
+    assert "Итоговый балл" in res1_finish.text
+    assert "Разбор вопросов и ошибок" in res1_finish.text
+    assert "Вопрос 1" in res1_finish.text
+    assert "Правильный ответ:" in res1_finish.text or "Ваш ответ:" in res1_finish.text
+
+    # 3. Check /result/{s1_id} works for student 1
+    res1_result = client.get(f"/result/{s1_id}")
+    assert res1_result.status_code == 200
+    assert "Смирнов Иван Алексеевич" in res1_result.text
+
+    # 4. Student 2 registers in a new client session
+    client2 = TestClient(app)
+    res2 = client2.post(
+        "/start",
+        data={
+            "fio": "Петрова Анна Сергеевна",
+            "group_name": "161-71",
+            "test_date": "2026-11-01",
+        },
+        follow_redirects=False,
+    )
+    s2_id = res2.headers["Location"].split("/exam/")[1]
+    client2.post(f"/submit/{s2_id}", data={}, follow_redirects=False)
+
+    # Student 2 tries to view Student 1's results using /result/{s1_id} -> must be 403 Forbidden!
+    res_forbidden = client2.get(f"/result/{s1_id}")
+    assert res_forbidden.status_code == 403
+    assert "Доступ запрещен" in res_forbidden.text
+
+    # 5. Admin can view any student's /result/{session_id}
+    admin_client = TestClient(app)
+    admin_pwd = os.getenv("ADMIN_PASSWORD", "admin_chem_tech")
+    admin_client.cookies.set("uni_admin_session", admin_pwd)
+    res_admin_view = admin_client.get(f"/result/{s1_id}")
+    assert res_admin_view.status_code == 200
+    assert "Смирнов Иван Алексеевич" in res_admin_view.text

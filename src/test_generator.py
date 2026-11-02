@@ -3,6 +3,7 @@
 import json
 import random
 import uuid
+from pathlib import Path
 from typing import Any
 
 import aiosqlite
@@ -22,7 +23,9 @@ __all__ = [
     "create_test_session",
     "generate_ticket_questions",
     "get_grade_label",
+    "get_question_explanations",
     "get_session_exam_data",
+    "get_session_results_data",
 ]
 
 
@@ -203,5 +206,136 @@ async def get_session_exam_data(db: aiosqlite.Connection, session_id: str) -> di
         "percentage": calculate_percentage(score_val, total_val),
         "focus_loss_count": session["focus_loss_count"] or 0,
         "created_at": session["created_at"],
+        "questions": questions,
+    }
+
+
+_EXPLANATIONS_CACHE: dict[str, str] | None = None
+
+
+def get_question_explanations() -> dict[str, str]:
+    """Loads and caches question explanations from raw_questions.json."""
+    global _EXPLANATIONS_CACHE
+    if _EXPLANATIONS_CACHE is not None:
+        return _EXPLANATIONS_CACHE
+
+    raw_path = Path(__file__).resolve().parent / "data" / "raw_questions.json"
+    explanations: dict[str, str] = {}
+    if raw_path.exists():
+        try:
+            with open(raw_path, encoding="utf-8") as f:
+                data = json.load(f)
+            for item in data:
+                q_text = item.get("question_text", "").strip()
+                expl = item.get("explanation", "").strip()
+                if q_text and expl:
+                    explanations[q_text] = expl
+        except (OSError, json.JSONDecodeError):
+            explanations = {}
+    _EXPLANATIONS_CACHE = explanations
+    return _EXPLANATIONS_CACHE
+
+
+async def get_session_results_data(
+    db: aiosqlite.Connection,
+    session_id: str,
+) -> dict[str, Any] | None:
+    """Fetches full graded exam results including questions, student answers,
+    correct answers, correctness flags, and explanations."""
+    cursor = await db.execute(
+        """
+        SELECT session_id, fio, group_name, test_date, score, total, grade, is_completed, focus_loss_count, created_at
+        FROM test_sessions
+        WHERE session_id = ?;
+        """,
+        (session_id,),
+    )
+    session = await cursor.fetchone()
+    if not session:
+        return None
+
+    cursor = await db.execute(
+        """
+        SELECT 
+            sq.question_id,
+            sq.question_order,
+            sq.options_json,
+            sq.selected_answer,
+            sq.is_correct,
+            q.section,
+            q.question_text,
+            q.correct_answer
+        FROM session_questions sq
+        JOIN questions q ON sq.question_id = q.id
+        WHERE sq.session_id = ?
+        ORDER BY sq.question_order ASC;
+        """,
+        (session_id,),
+    )
+    rows = await cursor.fetchall()
+    explanations = get_question_explanations()
+
+    questions: list[dict[str, Any]] = []
+    correct_count = 0
+
+    for r in rows:
+        options = json.loads(r["options_json"])
+        is_corr = bool(r["is_correct"])
+        if is_corr:
+            correct_count += 1
+
+        selected = r["selected_answer"]
+        if is_corr:
+            correctness = "correct"
+            correctness_label = "Правильно"
+        elif not selected or not selected.strip():
+            correctness = "unanswered"
+            correctness_label = "Нет ответа"
+        else:
+            correctness = "incorrect"
+            correctness_label = "Неправильно"
+
+        q_text = r["question_text"].strip()
+        explanation = explanations.get(q_text)
+
+        questions.append(
+            {
+                "question_id": r["question_id"],
+                "question_order": r["question_order"],
+                "section": r["section"],
+                "section_name": ALLOWED_SECTIONS.get(r["section"], ""),
+                "question_text": q_text,
+                "options": options,
+                "selected_answer": selected,
+                "correct_answer": r["correct_answer"].strip(),
+                "is_correct": is_corr,
+                "correctness": correctness,
+                "correctness_label": correctness_label,
+                "points": 0.5 if is_corr else 0.0,
+                "explanation": explanation,
+            }
+        )
+
+    score_val = float(session["score"])
+    total_val = float(session["total"])
+    grade_val = int(session["grade"])
+    error_count = len(questions) - correct_count
+
+    return {
+        "session_id": session["session_id"],
+        "fio": session["fio"],
+        "group_name": session["group_name"],
+        "test_date": session["test_date"],
+        "is_completed": bool(session["is_completed"]),
+        "score": score_val,
+        "total": total_val,
+        "formatted_score": format_score(score_val, total_val),
+        "grade": grade_val,
+        "grade_label": get_grade_label(grade_val),
+        "percentage": calculate_percentage(score_val, total_val),
+        "focus_loss_count": session["focus_loss_count"] or 0,
+        "created_at": session["created_at"],
+        "correct_count": correct_count,
+        "error_count": error_count,
         "questions": questions,
     }

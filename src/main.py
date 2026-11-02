@@ -25,11 +25,16 @@ from src.grading import (
 )
 from src.models import ALLOWED_GROUPS, ALLOWED_SECTIONS
 from src.seeder import seed_database
-from src.test_generator import create_test_session, get_session_exam_data
+from src.test_generator import (
+    create_test_session,
+    get_session_exam_data,
+    get_session_results_data,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin_chem_tech")
 ADMIN_COOKIE_NAME = "uni_admin_session"
+STUDENT_COOKIE_NAME = "student_session"
 
 
 @asynccontextmanager
@@ -171,10 +176,18 @@ async def start_exam(
         test_date=test_date,
     )
 
-    return RedirectResponse(
+    response = RedirectResponse(
         url=f"/exam/{session_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
+    response.set_cookie(
+        key=STUDENT_COOKIE_NAME,
+        value=session_id,
+        httponly=True,
+        samesite="lax",
+        max_age=86400 * 30,
+    )
+    return response
 
 
 @app.get("/exam/{session_id}", response_class=HTMLResponse)
@@ -192,10 +205,18 @@ async def exam_page(
         )
 
     if session_data["is_completed"]:
-        return RedirectResponse(
+        response = RedirectResponse(
             url="/finish",
             status_code=status.HTTP_303_SEE_OTHER,
         )
+        response.set_cookie(
+            key=STUDENT_COOKIE_NAME,
+            value=session_id,
+            httponly=True,
+            samesite="lax",
+            max_age=86400 * 30,
+        )
+        return response
 
     return templates.TemplateResponse(
         request=request,
@@ -238,20 +259,88 @@ async def submit_exam(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    return RedirectResponse(
+    response = RedirectResponse(
         url="/finish",
         status_code=status.HTTP_303_SEE_OTHER,
     )
+    response.set_cookie(
+        key=STUDENT_COOKIE_NAME,
+        value=session_id,
+        httponly=True,
+        samesite="lax",
+        max_age=86400 * 30,
+    )
+    return response
 
 
 @app.get("/finish", response_class=HTMLResponse)
-async def finish_page(request: Request):
-    """Confirmation page informing the student that answers are saved."""
-    return templates.TemplateResponse(
+@app.get("/result/{session_id}", response_class=HTMLResponse)
+async def finish_page(
+    request: Request,
+    session_id: str | None = None,
+    db: aiosqlite.Connection = Depends(get_db),
+):
+    """Detailed exam review page showing score, grade, correctness, and explanations."""
+    target_session_id = (
+        session_id
+        or request.query_params.get("session_id")
+        or request.cookies.get(STUDENT_COOKIE_NAME)
+    )
+
+    if not target_session_id:
+        return templates.TemplateResponse(
+            request=request,
+            name="finish.html",
+            context={"session": None},
+        )
+
+    student_cookie = request.cookies.get(STUDENT_COOKIE_NAME)
+    is_admin = is_admin_authenticated(request)
+
+    # Security check: if student attempts to view another student's session id
+    if student_cookie and student_cookie != target_session_id and not is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Доступ запрещен. Вы можете просматривать только результаты своей попытки.",
+        )
+
+    session_results = await get_session_results_data(db, target_session_id)
+    if not session_results:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Сессия тестирования не найдена.",
+        )
+
+    if not session_results["is_completed"]:
+        return RedirectResponse(
+            url=f"/exam/{target_session_id}",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    response = templates.TemplateResponse(
         request=request,
         name="finish.html",
-        context={},
+        context={
+            "session": session_results,
+            "score": session_results["score"],
+            "total": session_results["total"],
+            "formatted_score": session_results["formatted_score"],
+            "grade": session_results["grade"],
+            "grade_label": session_results["grade_label"],
+            "percentage": session_results["percentage"],
+            "questions": session_results["questions"],
+            "correct_count": session_results["correct_count"],
+            "error_count": session_results["error_count"],
+        },
     )
+    response.set_cookie(
+        key=STUDENT_COOKIE_NAME,
+        value=target_session_id,
+        httponly=True,
+        samesite="lax",
+        max_age=86400 * 30,
+    )
+    return response
 
 
 # ==========================================
