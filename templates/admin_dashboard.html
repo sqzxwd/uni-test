@@ -114,7 +114,7 @@
                     <label for="group" class="text-xs font-bold text-slate-700 whitespace-nowrap">Группа:</label>
                     <select id="group" name="group" onchange="this.form.submit()"
                             class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
-                        <option value="" {% if not current_group %}selected{% endif %}>— Все группы (7 групп) —</option>
+                        <option value="" {% if not current_group %}selected{% endif %}>— Все группы ({{ groups | length }} групп) —</option>
                         {% for g in groups %}
                         <option value="{{ g }}" {% if current_group == g %}selected{% endif %}>{{ g }}</option>
                         {% endfor %}
